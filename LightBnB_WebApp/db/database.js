@@ -155,30 +155,33 @@ const getAllProperties = function (options, limit = 10) {
     whereClauses.push(`cost_per_night <= $${queryParams.length}`);
   }
 
-  if (options.minimum_rating) {
-    queryParams.push(options.minimum_rating);
-    whereClauses.push(`AVG(property_reviews.rating) >= $${queryParams.length}`);
-  }
-
   // Combine WHERE clauses if there are any
   if (whereClauses.length > 0) {
     queryString += `WHERE ${whereClauses.join(' AND ')} `;
   }
 
-  // 4. Add GROUP BY, ORDER BY, and LIMIT
+  // 4. Add HAVING clause for minimum_rating
+  if (options.minimum_rating) {
+    queryParams.push(options.minimum_rating);
+    queryString += `GROUP BY properties.id HAVING AVG(property_reviews.rating) >= $${queryParams.length} `;
+  } else {
+    queryString += `GROUP BY properties.id `;
+  }
+
+  // 5. Add ORDER BY and LIMIT
   queryParams.push(limit);
   queryString += `
-    GROUP BY properties.id
     ORDER BY cost_per_night
     LIMIT $${queryParams.length};
   `;
 
-  // 5. Log query for debugging
+  // 6. Log query for debugging
   console.log(queryString, queryParams);
 
-  // 6. Execute query and return results
+  // 7. Execute query and return results
   return pool.query(queryString, queryParams).then((res) => res.rows);
 };
+
 
 
 
