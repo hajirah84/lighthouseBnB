@@ -21,7 +21,7 @@ const users = require("./json/users.json");
 const getUserWithEmail = (email) => {
   return pool
     .query(
-      `SELECT * FROM users WHERE email = $1 LIMIT 1;`, 
+      `SELECT * FROM users WHERE email = $1;`, 
       [email]
     )
     .then((result) => {
@@ -34,6 +34,7 @@ const getUserWithEmail = (email) => {
 };
 
 
+
 /**
  * Get a single user from the database given their id.
  * @param {string} id The id of the user.
@@ -42,7 +43,7 @@ const getUserWithEmail = (email) => {
 const getUserWithId = (id) => {
   return pool
     .query(
-      `SELECT * FROM users WHERE id = $1 LIMIT 1;`, 
+      `SELECT * FROM users WHERE id = $1;`, 
       [id]
     )
     .then((result) => {
@@ -53,6 +54,7 @@ const getUserWithId = (id) => {
       return null;
     });
 };
+
 
 
 /**
@@ -86,9 +88,30 @@ const addUser = (user) => {
  * @param {string} guest_id The id of the user.
  * @return {Promise<[{}]>} A promise to the reservations.
  */
-const getAllReservations = function (guest_id, limit = 10) {
-  return getAllProperties(null, 2);
+const getAllReservations = (guest_id, limit = 10) => {
+  return pool
+    .query(
+      `
+      SELECT reservations.*, properties.*, AVG(property_reviews.rating) as average_rating
+      FROM reservations
+      JOIN properties ON reservations.property_id = properties.id
+      LEFT JOIN property_reviews ON properties.id = property_reviews.property_id
+      WHERE reservations.guest_id = $1
+      GROUP BY reservations.id, properties.id
+      ORDER BY reservations.start_date
+      LIMIT $2;
+      `,
+      [guest_id, limit]
+    )
+    .then((result) => {
+      return result.rows; // Return the list of reservations
+    })
+    .catch((err) => {
+      console.error("Error fetching reservations:", err.message);
+      return [];
+    });
 };
+
 
 /// Properties
 
